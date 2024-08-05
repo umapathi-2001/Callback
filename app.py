@@ -1,17 +1,22 @@
-from flask import Flask, request
+from flask import Flask, request, jsonify
 import requests
 import json
 
 app = Flask(__name__)
 
-client_id = 'XU01403-100'
-secret_key = 'XCUZMZV0UF'
-redirect_uri = 'https://flask-quiet-fog-1403.fly.dev/callback'  # Update with your actual Fly.io URL
+client_id = 'XU01403-100'  # Your Fyers client ID with the required suffix
+secret_key = 'XCUZMZV0UF'  # Your Fyers secret key
+redirect_uri = 'https://flask-quiet-fog-1403.fly.dev/callback'  # Your actual Fly.io URL
 
-@app.route('/callback')
+@app.route('/callback', methods=['GET'])
 def callback():
     auth_code = request.args.get('code')
-    if (auth_code):
+    state = request.args.get('state')
+
+    # Logging the received parameters
+    app.logger.info(f"Callback hit with auth_code: {auth_code}, state: {state}")
+
+    if auth_code:
         # Use the auth_code to request an access token
         data = {
             'client_id': client_id,
@@ -25,8 +30,17 @@ def callback():
         response_data = response.json()
         access_token = response_data.get('access_token')
 
-        return f"Access Token: {access_token}\nResponse: {response_data}"
-    return "No auth code found", 400
+        app.logger.info(f"Response from token request: {response_data}")
+
+        return jsonify({
+            "auth_code": auth_code,
+            "state": state,
+            "access_token": access_token,
+            "response_data": response_data
+        })
+
+    return jsonify({"auth_code": auth_code, "state": state, "error": "No auth code found"}), 400
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)
+    
